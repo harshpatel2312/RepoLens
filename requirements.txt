@@ -1,0 +1,15 @@
+sentence-transformers
+qdrant-client
+transformers
+pydantic
+pydantic-settings
+PyYAML
+typer
+rich
+tiktoken
+python-dotenv
+
+pytest
+pytest-cov
+ruff
+mypy
