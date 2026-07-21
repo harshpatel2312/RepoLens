@@ -1,27 +1,50 @@
-ingestion:
-  extensions: [".py", ".txt", ".md"]
-  max_file_size: 1 # MB
+INGESTION:
+  MAX_FILE_SIZE: 1048576  # 1 MiB
+  EXTENSIONS: [".py", ".txt", ".md"]
+  IGNORE_DIRECTORIES: [
+    ".git",
+    ".hg",
+    ".svn",
+    ".venv",
+    "venv",
+    "env",
+    "__pycache__",
+    ".pytest_cache",
+    ".mypy_cache",
+    ".ruff_cache",
+    ".tox",
+    "node_modules",
+    "build",
+    "dist",
+    "site-packages",
+    ".repolens"
+  ]
+  GENERATED_FILE_PATTERNS: [
+    "*.generated.py",
+    "*_pb2.py",
+    "*_pb2_grpc.py",
+  ]
 
-chunking:
-  chunk_size: 512 # tokens
-  overlap: 64 # tokens
-  min_chunk_size: 30 # tokens
 
-embedding:
-  model: "BAAI/bge-small-en-v1.5"
-  batch_size: 16 # for CUDA
-  normalize: true
-  device: "auto" # "cpu" or "cuda" 
+CHUNKING:
+  CHUNK_SIZE: 512 # tokens
+  OVERLAP: 64 # tokens
+  MIN_CHUNK_SIZE: 30 # tokens
 
-qdrant:
-  url: "http://localhost:6333"
-  collection_name: "repolens_chunks_v1"
-  distance: "Cosine"
+EMBEDDING:
+  MODEL: "BAAI/bge-small-en-v1.5"
+  BATCH_SIZE: 16 # for CUDA
+  NORMALIZE: true
+  DEVICE: "auto" # "cpu" or "cuda" 
 
-retirieval:
-  top_k: 5
+QDRANT:
+  URL: "http://localhost:6333"
+  COLLECTION_NAME: "repolens_chunks_v1"
+  DISTANCE: "Cosine"
 
-generation:
-  temperature: 0.1
-  context_window: 4096 # tokens
+RETRIEVAL:
+  TOP_K: 5
 
+GENERATION:
+  TEMPERATURE: 0.1
+  CONTEXT_WINDOW: 4096 # tokens
