@@ -1,6 +1,10 @@
 INGESTION:
   MAX_FILE_SIZE: 1048576  # 1 MiB
   EXTENSIONS: [".py", ".txt", ".md"]
+  FILE_TYPES:             # for mapping
+    ".py": "python"
+    ".md": "markdown"
+    ".txt": "text"
   IGNORE_DIRECTORIES: [
     ".git",
     ".hg",
