@@ -29,6 +29,8 @@ INGESTION:
     "*_pb2_grpc.py",
   ]
 
+TOKENIZER:
+  ENCODING_NAME: "cl100k_base" # for tiktoken
 
 CHUNKING:
   CHUNK_SIZE: 512 # tokens

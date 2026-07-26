@@ -7,7 +7,7 @@ import unicodedata
 from pathlib import Path
 
 from repolens.config import config, logger
-from .models import (
+from ..models import (
     FileMetadata, 
     IngestedDocument, 
     IngestionFailure, 

@@ -14,6 +14,23 @@ class IngestedDocument:
     metadata: FileMetadata
 
 @dataclass(frozen=True)
+class ChunkMetadata:
+    repository: str
+    relative_path: str
+    file_type: str
+    start_line: int
+    end_line: int
+    token_count: int
+    content_hash: str
+    chunk_id: str
+    heading: str | None = None
+
+@dataclass(frozen=True)
+class TextChunk:
+    content: str
+    metadata: ChunkMetadata
+
+@dataclass(frozen=True)
 class IngestionFailure:
     relative_path: str
     reason: str
