@@ -14,6 +14,7 @@ from ..models import (
     IngestionSummary,
 )
 
+
 def is_generated_file(file_path: Path) -> bool:
     """
     Check if the given file is a generated file based on its name.
@@ -27,6 +28,7 @@ def is_generated_file(file_path: Path) -> bool:
     filename = file_path.name.lower()
 
     return any(fnmatch.fnmatch(file_path.name, pattern.lower()) for pattern in config["INGESTION"]["GENERATED_FILE_PATTERNS"])
+
 
 def discover_files(
     repository_path: Path,
@@ -95,12 +97,14 @@ def discover_files(
         key=lambda path: path.relative_to(repository_path).as_posix(),
     )
 
+
 def normalize_content(content: str) -> str:
     """Normalize text by applying Unicode NFC normalization"""
     content = content.replace("\r\n", "\n")  # Normalize line endings
     content = content.replace("\r", "\n")  # Normalize line endings
 
     return unicodedata.normalize("NFC", content)
+
 
 def decode_content(path: Path, raw_content: bytes) -> str:
     """Decode supported repository files"""
@@ -115,10 +119,12 @@ def decode_content(path: Path, raw_content: bytes) -> str:
     
     return raw_content.decode("utf-8-sig")  # Decode all other files with BOM handling
 
+
 def compute_content_hash(content: str) -> str:
     """Compute SHA-256 hash of the content"""
     encoded_content = content.encode("utf-8")
     return hashlib.sha256(encoded_content).hexdigest()
+
 
 def load_file(
     path: Path, 
@@ -149,6 +155,7 @@ def load_file(
         content=normalized_content,
         metadata=metadata,
     )
+
 
 def ingest_repository(
     repository_path: Path,
@@ -210,12 +217,3 @@ def ingest_repository(
     )
 
     return documents, summary
-
-
-
-
-
-
-
-
-    

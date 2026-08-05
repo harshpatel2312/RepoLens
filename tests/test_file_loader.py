@@ -7,6 +7,7 @@ from repolens.ingestion.loader import (
     load_file,
 )
 
+
 def test_discovers_supported_files_in_sorted_order(
     tmp_path: Path,
 ) -> None:
@@ -40,6 +41,7 @@ def test_discovers_supported_files_in_sorted_order(
         "notes.txt",
     ]
 
+
 def test_ignored_directories_are_not_scanned(
     tmp_path: Path,
 ) -> None:
@@ -71,6 +73,7 @@ def test_ignored_directories_are_not_scanned(
 
     assert relative_paths == ["visible.py"]
 
+
 def test_missing_repository_raises_error(
     tmp_path: Path,
 ) -> None:
@@ -78,6 +81,7 @@ def test_missing_repository_raises_error(
 
     with pytest.raises(FileNotFoundError):
         discover_files(missing_path)
+
 
 def test_load_file_returns_content_and_metadata(
     tmp_path: Path,
@@ -98,6 +102,7 @@ def test_load_file_returns_content_and_metadata(
     assert document.metadata.size_bytes > 0
     assert len(document.metadata.content_hash) == 64
 
+
 def test_load_file_normalizes_newlines(
     tmp_path: Path,
 ) -> None:
@@ -109,6 +114,7 @@ def test_load_file_normalizes_newlines(
     assert document is not None
     assert document.content == "First line\nSecond line\n"
 
+
 def test_load_file_skips_empty_content(
     tmp_path: Path,
 ) -> None:
@@ -119,6 +125,7 @@ def test_load_file_skips_empty_content(
 
     assert document is None
 
+
 def test_load_file_rejects_binary_content(
     tmp_path: Path,
 ) -> None:
@@ -127,6 +134,7 @@ def test_load_file_rejects_binary_content(
 
     with pytest.raises(ValueError, match="Binary content detected"):
         load_file(file_path, tmp_path)
+
 
 def test_ingest_repository_returns_documents_and_summary(
     tmp_path: Path,
@@ -170,6 +178,7 @@ def test_ingest_repository_returns_documents_and_summary(
         for document in documents
     )
 
+
 def test_ingest_repository_records_empty_files(
     tmp_path: Path,
 ) -> None:
@@ -191,6 +200,7 @@ def test_ingest_repository_records_empty_files(
     assert summary.ingested_files == 1
     assert summary.empty_files == 1
     assert summary.failed_files == 0
+
 
 def test_invalid_file_does_not_stop_repository_ingestion(
     tmp_path: Path,

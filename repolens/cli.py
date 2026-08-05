@@ -8,6 +8,7 @@ from repolens.ingestion.loader import(
     ingest_repository,
 )
 
+
 def build_parser() -> argparse.ArgumentParser:
     """Build the command-line argument parser."""
     
@@ -53,6 +54,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     return parser
 
+
 def run_ingest_command(args: argparse.Namespace) -> int:
     """Run the repository ingestion and print its summary."""
 
@@ -95,6 +97,7 @@ def run_ingest_command(args: argparse.Namespace) -> int:
 
     return 0
 
+
 def main(argv: Sequence[str] | None = None) -> int:
     """Main entry point for the CLI."""
 
@@ -113,6 +116,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     
     logger.error(f"Unknown command: {args.command}")
     return 2
+
 
 if __name__ == "__main__":
     raise SystemExit(main())

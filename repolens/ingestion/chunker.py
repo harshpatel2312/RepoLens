@@ -1,5 +1,6 @@
 import hashlib
 import json
+import re
 from collections.abc import Sequence
 
 import tiktoken
@@ -12,14 +13,19 @@ from repolens.models import (
 )
 
 _TOKEN_ENCODER = tiktoken.get_encoding(config["TOKENIZER"]["ENCODING_NAME"])
+_MARKDOWN_HEADING_PATTERN = re.compile(r"^[ \t]{0,3}#{1,6}(?:[ \t]+|$)(?P<title>.*)$")
+_MARKDOWN_FENCE_PATTERN = re.compile(r"^[ \t]{0,3}(?P<fence>`{3,}|~{3,})")
+
 
 def count_tokens(content: str) -> int:
     """Return the approximate number of tokens in text."""
     return len(_TOKEN_ENCODER.encode_ordinary(content))
 
+
 def compute_chunk_hash(content: str) -> str:
     """Compute SHA-256 hash of the chunk's content"""
     return hashlib.sha256(content.encode("utf-8")).hexdigest()
+
 
 def generate_chunk_id(
     *,
@@ -45,6 +51,7 @@ def generate_chunk_id(
 
     return hashlib.sha256(identity.encode("utf-8")).hexdigest()
 
+
 def validate_chunking_settings(
     chunk_size: int,
     overlap: int,
@@ -63,17 +70,21 @@ def validate_chunking_settings(
     if min_chunk_size > chunk_size:
         raise ValueError("min_chunk_size cannot be greater than chunk_size")
 
+
 def _find_chunk_end(
     lines: Sequence[str],
     start_index: int,
     chunk_size: int,
+    stop_index: int | None = None,
 ) -> int:
     """Find the exclusive ending line index for a chunk."""
+
+    limit = len(lines) if stop_index is None else min(len(lines), stop_index)
 
     end_index = start_index
     current_tokens = 0
 
-    while end_index < len(lines):
+    while end_index < limit:
         line_tokens = count_tokens(lines[end_index])
 
         if end_index > start_index and current_tokens + line_tokens > chunk_size:
@@ -86,6 +97,7 @@ def _find_chunk_end(
             break
 
     return end_index
+
 
 def _find_next_start(
     lines: Sequence[str],
@@ -120,6 +132,7 @@ def _find_next_start(
         return end_index
 
     return next_start
+
 
 def _create_chunk(
     document: IngestedDocument,
@@ -158,6 +171,147 @@ def _create_chunk(
         metadata=metadata,
     )
 
+
+def _chunk_line_range(
+    document: IngestedDocument,
+    lines: Sequence[str],
+    range_start: int,
+    range_end: int,
+    *,
+    chunk_size: int,
+    overlap: int,
+    min_chunk_size: int,
+    heading: str | None = None,
+) -> list[TextChunk]:
+    """Chunk one line range without crossing its ending boundary."""
+
+    chunks: list[TextChunk] = []
+    start_index = range_start
+
+    while start_index < range_end:
+        end_index = _find_chunk_end(lines, start_index, chunk_size, stop_index=range_end)
+        content = "".join(lines[start_index:end_index])
+
+        if content.strip():
+            chunk = _create_chunk(
+                document=document,
+                content=content,
+                start_line=start_index + 1,
+                end_line=end_index,
+                heading=heading,
+            )
+
+            if chunk.metadata.token_count < min_chunk_size:
+                logger.debug(
+                    "Retaining undersized chunk for %s at lines %d-%d",
+                    document.metadata.relative_path,
+                    chunk.metadata.start_line,
+                    chunk.metadata.end_line,
+                )
+
+            # Dropping an undersized chunk would remove source content.
+            chunks.append(chunk)
+
+        if end_index >= range_end:
+            break
+
+        start_index = _find_next_start(lines, start_index, end_index, overlap)
+
+    return chunks
+
+
+def _find_markdown_sections(
+    lines: Sequence[str],
+) -> list[tuple[int, int, str | None]]:
+    """Return Markdown sections as start, end, and heading tuples."""
+
+    sections: list[tuple[int, int, str | None]] = []
+
+    section_start = 0
+    current_heading: str | None = None
+
+    fence_character: str | None = None
+    fence_length = 0
+
+    for line_index, line in enumerate(lines):
+        fence_match = _MARKDOWN_FENCE_PATTERN.match(line)
+
+        if fence_match:
+            fence = fence_match.group("fence")
+
+            if fence_character is None:
+                fence_character = fence[0]
+                fence_length = len(fence)
+
+            elif fence[0] == fence_character and len(fence) >= fence_length:
+                fence_character = None
+                fence_length = 0
+
+            continue
+
+        # Ignore headings inside fenced code blocks
+        if fence_character is not None:
+            continue
+
+        heading_match = _MARKDOWN_HEADING_PATTERN.match(line.rstrip("\r\n"))
+
+        if heading_match is None:
+            continue
+
+        # Finish the current section and start a new one
+        if line_index > section_start:
+            sections.append((section_start, line_index, current_heading))
+
+        title = heading_match.group("title").strip()
+
+        # Convert "# Installation ###" into "Installation".
+        title = re.sub(
+            r"[ \t]+#+[ \t]*$",
+            "",
+            title,
+        ).strip()
+
+        current_heading = title or None
+        section_start = line_index
+
+    # Add the last section if it has any content
+    if section_start < len(lines):
+        sections.append((section_start, len(lines), current_heading))
+
+    return sections
+
+
+def chunk_markdown_document(
+    document: IngestedDocument,
+    *,
+    chunk_size: int,
+    overlap: int,
+    min_chunk_size: int,
+) -> list[TextChunk]:
+    """Split Markdown at headings and chunk oversized sections."""
+
+    lines = document.content.splitlines(keepends=True)
+    chunks: list[TextChunk] = []
+
+    sections = _find_markdown_sections(lines)
+
+    for section_start, section_end, heading in sections:
+        section_chunks = _chunk_line_range(
+            document=document,
+            lines=lines,
+            range_start=section_start,
+            range_end=section_end,
+            chunk_size=chunk_size,
+            overlap=overlap,
+            min_chunk_size=min_chunk_size,
+            heading=heading,
+        )
+        
+        chunks.extend(section_chunks)
+
+    return chunks
+
+
 def chunk_document(
     document: IngestedDocument,
     *,
@@ -172,33 +326,26 @@ def chunk_document(
     if not document.content.strip():
         return []
 
-    lines = document.content.splitlines(keepends=True)
     chunks: list[TextChunk] = []
-    start_index = 0
 
-    while start_index < len(lines):
-        end_index = _find_chunk_end(lines, start_index, chunk_size)
-        content = "".join(lines[start_index:end_index])
-
-        if content.strip():
-            chunk = _create_chunk(
-                document=document,
-                content=content,
-                start_line=start_index + 1,
-                end_line=end_index,
-            )
-
-            if chunk.metadata.token_count >= min_chunk_size or not chunks:
-                chunks.append(chunk)
-            else:
-                # Keep a small trailing chunk when dropping it
-                # would remove source content.
-                chunks.append(chunk)
-
-        if end_index >= len(lines):
-            break
-
-        start_index = _find_next_start(lines, start_index, end_index, overlap)
+    if document.metadata.file_type == "markdown":
+        chunks = chunk_markdown_document(
+            document=document,
+            chunk_size=chunk_size,
+            overlap=overlap,
+            min_chunk_size=min_chunk_size,
+        )
+    else:
+        lines = document.content.splitlines(keepends=True)
+        chunks =  _chunk_line_range(
+            document,
+            lines,
+            0,
+            len(lines),
+            chunk_size=chunk_size,
+            overlap=overlap,
+            min_chunk_size=min_chunk_size,
+        )
 
     logger.debug(
         "Chunked %s into %d chunks",
@@ -207,6 +354,7 @@ def chunk_document(
     )
 
     return chunks
+
 
 def chunk_documents(
     documents: list[IngestedDocument],

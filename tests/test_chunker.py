@@ -8,13 +8,18 @@ from repolens.models import (
 )
 
 
-def create_document(content: str) -> IngestedDocument:
+def create_document(
+    content: str,
+    *,
+    relative_path: str = "src/example.py",
+    file_type: str = "python",
+) -> IngestedDocument:
     return IngestedDocument(
         content=content,
         metadata=FileMetadata(
             repository="example-repository",
-            relative_path="src/example.py",
-            file_type="python",
+            relative_path=relative_path,
+            file_type=file_type,
             size_bytes=len(content.encode("utf-8")),
             content_hash="source-file-hash",
         ),
@@ -160,3 +165,126 @@ def test_chunk_identity_includes_source_location() -> None:
     )
 
     assert first_id != second_id
+
+
+def test_markdown_headings_stay_with_their_sections() -> None:
+    document = create_document(
+        "Project overview.\n"
+        "\n"
+        "# Installation\n"
+        "Install the package.\n"
+        "\n"
+        "## Configuration\n"
+        "Set the environment variables.\n",
+        relative_path="README.md",
+        file_type="markdown",
+    )
+
+    chunks = chunk_document(
+        document,
+        chunk_size=100,
+        overlap=0,
+        min_chunk_size=1,
+    )
+
+    assert len(chunks) == 3
+
+    assert chunks[0].metadata.heading is None
+
+    assert chunks[1].metadata.heading == "Installation"
+    assert chunks[1].content.startswith("# Installation\n")
+    assert chunks[1].metadata.start_line == 3
+
+    assert chunks[2].metadata.heading == "Configuration"
+    assert chunks[2].content.startswith("## Configuration\n")
+    assert chunks[2].metadata.start_line == 6
+
+
+def test_oversized_markdown_section_is_split() -> None:
+    document = create_document(
+        "# Installation\n"
+        "Run the first command.\n"
+        "Run the second command.\n"
+        "Run the third command.\n"
+        "Run the fourth command.\n",
+        relative_path="README.md",
+        file_type="markdown",
+    )
+
+    chunks = chunk_document(
+        document,
+        chunk_size=8,
+        overlap=2,
+        min_chunk_size=1,
+    )
+
+    assert len(chunks) > 1
+    assert chunks[0].content.startswith("# Installation\n")
+
+    assert all(
+        chunk.metadata.heading == "Installation"
+        for chunk in chunks
+    )
+
+
+def test_markdown_heading_inside_code_fence_is_ignored() -> None:
+    document = create_document(
+        "# Example\n"
+        "```python\n"
+        "# This is a Python comment\n"
+        "print('hello')\n"
+        "```\n"
+        "More explanation.\n",
+        relative_path="README.md",
+        file_type="markdown",
+    )
+
+    chunks = chunk_document(
+        document,
+        chunk_size=100,
+        overlap=0,
+        min_chunk_size=1,
+    )
+
+    assert len(chunks) == 1
+    assert chunks[0].metadata.heading == "Example"
+
+    assert (
+        "# This is a Python comment"
+        in chunks[0].content
+    )
+
+
+def test_markdown_chunk_ids_are_deterministic() -> None:
+    document = create_document(
+        "# Usage\n"
+        "Run the application.\n",
+        relative_path="README.md",
+        file_type="markdown",
+    )
+
+    first_chunks = chunk_document(
+        document,
+        chunk_size=10,
+        overlap=2,
+        min_chunk_size=1,
+    )
+
+    second_chunks = chunk_document(
+        document,
+        chunk_size=10,
+        overlap=2,
+        min_chunk_size=1,
+    )
+
+    first_ids = [
+        chunk.metadata.chunk_id
+        for chunk in first_chunks
+    ]
+
+    second_ids = [
+        chunk.metadata.chunk_id
+        for chunk in second_chunks
+    ]
+
+    assert first_ids == second_ids
