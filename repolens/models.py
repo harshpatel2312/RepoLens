@@ -8,10 +8,12 @@ class FileMetadata:
     size_bytes: int
     content_hash: str
 
+
 @dataclass(frozen=True)
 class IngestedDocument:
     content: str
     metadata: FileMetadata
+
 
 @dataclass(frozen=True)
 class ChunkMetadata:
@@ -25,15 +27,18 @@ class ChunkMetadata:
     chunk_id: str
     heading: str | None = None
 
+
 @dataclass(frozen=True)
 class TextChunk:
     content: str
     metadata: ChunkMetadata
 
+
 @dataclass(frozen=True)
 class IngestionFailure:
     relative_path: str
     reason: str
+
 
 @dataclass
 class IngestionSummary:
@@ -42,4 +47,3 @@ class IngestionSummary:
     empty_files: int = 0
     failed_files: int = 0
     failures: list[IngestionFailure] = field(default_factory=list)
-    
