@@ -38,10 +38,10 @@ CHUNKING:
   MIN_CHUNK_SIZE: 30 # tokens
 
 EMBEDDING:
-  MODEL: "BAAI/bge-small-en-v1.5"
+  MODEL_NAME: "BAAI/bge-small-en-v1.5"
   BATCH_SIZE: 16 # for CUDA
   NORMALIZE: true
-  DEVICE: "auto" # "cpu" or "cuda" 
+  DEVICE: "cpu" # "cpu" or "cuda" 
 
 QDRANT:
   URL: "http://localhost:6333"

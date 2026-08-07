@@ -35,6 +35,13 @@ class TextChunk:
 
 
 @dataclass(frozen=True)
+class EmbeddedChunk:
+    content: str
+    metadata: ChunkMetadata
+    embedding: list[float]
+
+
+@dataclass(frozen=True)
 class IngestionFailure:
     relative_path: str
     reason: str
