@@ -1,5 +1,6 @@
 import logging
 from unittest.mock import patch
+from pathlib import Path
 
 import pytest
 
@@ -245,3 +246,152 @@ def test_model_loader_caches_model() -> None:
     )
 
     load_embedding_model.cache_clear()
+
+
+def test_duplicate_chunk_ids_are_embedded_once() -> None:
+    chunk = create_chunk(
+        "duplicate content",
+        chunk_id="duplicate-id",
+    )
+
+    model = FakeEmbeddingModel(
+        [[0.1, 0.2, 0.3]]
+    )
+
+    results = embed_chunks(
+        [chunk, chunk],
+        model_name="test-model",
+        device="cpu",
+        embedding_model=model,
+    )
+
+    assert len(results) == 1
+    assert model.contents == ["duplicate content"]
+
+
+def test_cached_chunk_is_not_embedded_again(
+    tmp_path: Path,
+) -> None:
+    cache_path = (
+        tmp_path / "embedding-cache.json"
+    )
+
+    chunk = create_chunk(
+        "cached content",
+        chunk_id="cached-id",
+    )
+
+    first_model = FakeEmbeddingModel(
+        [[0.1, 0.2, 0.3]]
+    )
+
+    embed_chunks(
+        [chunk],
+        model_name="test-model",
+        device="cpu",
+        embedding_model=first_model,
+        cache_path=cache_path,
+    )
+
+    results = embed_chunks(
+        [chunk],
+        model_name="test-model",
+        device="cpu",
+        embedding_model=FailingEmbeddingModel(),
+        cache_path=cache_path,
+    )
+
+    assert results[0].embedding == [
+        0.1,
+        0.2,
+        0.3,
+    ]
+
+
+def test_only_new_chunk_is_embedded(
+    tmp_path: Path,
+) -> None:
+    cache_path = (
+        tmp_path / "embedding-cache.json"
+    )
+
+    unchanged_chunk = create_chunk(
+        "unchanged content",
+        chunk_id="unchanged-id",
+    )
+
+    first_model = FakeEmbeddingModel(
+        [[0.1, 0.2]]
+    )
+
+    embed_chunks(
+        [unchanged_chunk],
+        model_name="test-model",
+        device="cpu",
+        embedding_model=first_model,
+        cache_path=cache_path,
+    )
+
+    changed_chunk = create_chunk(
+        "changed content",
+        chunk_id="changed-id",
+    )
+
+    second_model = FakeEmbeddingModel(
+        [[0.8, 0.9]]
+    )
+
+    results = embed_chunks(
+        [unchanged_chunk, changed_chunk],
+        model_name="test-model",
+        device="cpu",
+        embedding_model=second_model,
+        cache_path=cache_path,
+    )
+
+    assert second_model.contents == [
+        "changed content"
+    ]
+
+    assert results[0].embedding == [0.1, 0.2]
+    assert results[1].embedding == [0.8, 0.9]
+
+
+def test_different_model_invalidates_cache(
+    tmp_path: Path,
+) -> None:
+    cache_path = (
+        tmp_path / "embedding-cache.json"
+    )
+
+    chunk = create_chunk(
+        "example content",
+        chunk_id="chunk-id",
+    )
+
+    embed_chunks(
+        [chunk],
+        model_name="model-a",
+        device="cpu",
+        embedding_model=FakeEmbeddingModel(
+            [[0.1, 0.2]]
+        ),
+        cache_path=cache_path,
+    )
+
+    replacement_model = FakeEmbeddingModel(
+        [[0.7, 0.8]]
+    )
+
+    results = embed_chunks(
+        [chunk],
+        model_name="model-b",
+        device="cpu",
+        embedding_model=replacement_model,
+        cache_path=cache_path,
+    )
+
+    assert replacement_model.contents == [
+        "example content"
+    ]
+    assert results[0].embedding == [0.7, 0.8]
