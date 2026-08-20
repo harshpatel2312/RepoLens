@@ -1,0 +1,42 @@
+[
+  {
+    "question": "Where is the RepoLens YAML configuration loaded?",
+    "expected_files": ["repolens/config.py"]
+  },
+  {
+    "question": "How are supported repository files discovered?",
+    "expected_files": ["repolens/ingestion/loader.py"]
+  },
+  {
+    "question": "How are file contents normalized before ingestion?",
+    "expected_files": ["repolens/ingestion/loader.py"]
+  },
+  {
+    "question": "How are deterministic chunk IDs generated?",
+    "expected_files": ["repolens/ingestion/chunker.py"]
+  },
+  {
+    "question": "How does Markdown chunking preserve headings?",
+    "expected_files": ["repolens/ingestion/chunker.py"]
+  },
+  {
+    "question": "Where is the embedding model loaded and cached?",
+    "expected_files": ["repolens/retrieval/embedder.py"]
+  },
+  {
+    "question": "How are embedding vectors persisted between runs?",
+    "expected_files": ["repolens/retrieval/embedding_cache.py"]
+  },
+  {
+    "question": "How are embedded chunks upserted into Qdrant?",
+    "expected_files": ["repolens/retrieval/qdrant_store.py"]
+  },
+  {
+    "question": "How are repository and file type search filters constructed?",
+    "expected_files": ["repolens/retrieval/qdrant_store.py"]
+  },
+  {
+    "question": "Which CLI command indexes a repository?",
+    "expected_files": ["repolens/cli.py"]
+  }
+]

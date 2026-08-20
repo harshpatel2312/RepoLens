@@ -42,11 +42,13 @@ EMBEDDING:
   BATCH_SIZE: 16 # for CUDA
   NORMALIZE: true
   DEVICE: "cpu" # "cpu" or "cuda" 
+  QUERY_PREFIX: "Represent this sentence for searching relevant passages: "
 
 QDRANT:
   URL: "http://localhost:6333"
   COLLECTION_NAME: "repolens_chunks_v1"
   DISTANCE: "Cosine"
+  UPSERT_BATCH_SIZE: 64 # for CUDA
 
 RETRIEVAL:
   TOP_K: 5
