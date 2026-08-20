@@ -1,6 +1,14 @@
 from pathlib import Path
+from unittest.mock import Mock, patch
 
 from repolens.cli import main
+from repolens.models import (
+    ChunkMetadata,
+    EmbeddedChunk,
+    IngestionSummary,
+    SearchResult,
+    TextChunk,
+)
 
 
 def test_ingest_command_logs_summary(
@@ -179,3 +187,146 @@ def test_inspect_chunks_output_is_deterministic(
     assert first_output.index("File: a.txt") < first_output.index(
         "File: b.txt"
     )
+
+
+def create_chunk() -> TextChunk:
+    """Create a representative chunk for REP-8 CLI tests."""
+
+    return TextChunk(
+        content="def embed_chunks(): pass\n",
+        metadata=ChunkMetadata(
+            repository="RepoLens",
+            relative_path="repolens/retrieval/embedder.py",
+            file_type="python",
+            start_line=1,
+            end_line=1,
+            token_count=6,
+            content_hash="content-hash",
+            chunk_id="chunk-id",
+        ),
+    )
+
+
+def test_index_command_runs_complete_pipeline(
+    tmp_path: Path,
+    capsys,
+) -> None:
+    chunk = create_chunk()
+    embedded_chunk = EmbeddedChunk(
+        content=chunk.content,
+        metadata=chunk.metadata,
+        embedding=[1.0, 0.0],
+    )
+    summary = IngestionSummary(
+        discovered_files=1,
+        ingested_files=1,
+    )
+    client = Mock()
+
+    with (
+        patch(
+            "repolens.cli.ingest_repository",
+            return_value=([Mock()], summary),
+        ),
+        patch(
+            "repolens.cli.chunk_documents",
+            return_value=[chunk],
+        ),
+        patch(
+            "repolens.cli.embed_chunks",
+            return_value=[embedded_chunk],
+        ),
+        patch(
+            "repolens.cli.create_qdrant_client",
+            return_value=client,
+        ),
+        patch(
+            "repolens.cli.upsert_embedded_chunks",
+            return_value=1,
+        ) as upsert,
+    ):
+        exit_code = main([
+            "index",
+            str(tmp_path),
+            "--repository-name",
+            "RepoLens",
+            "--collection-name",
+            "test-chunks",
+        ])
+
+    output = capsys.readouterr().out
+
+    assert exit_code == 0
+    assert "Repository: RepoLens" in output
+    assert "Indexed chunks: 1" in output
+    assert "Collection: test-chunks" in output
+    upsert.assert_called_once_with(
+        client,
+        [embedded_chunk],
+        collection_name="test-chunks",
+        batch_size=64,
+    )
+
+
+def test_search_command_prints_ranked_source_metadata(
+    capsys,
+) -> None:
+    chunk = create_chunk()
+    result = SearchResult(
+        rank=1,
+        score=0.98765,
+        content=chunk.content,
+        metadata=chunk.metadata,
+    )
+
+    with (
+        patch(
+            "repolens.cli.create_qdrant_client",
+            return_value=Mock(),
+        ),
+        patch(
+            "repolens.cli.search_repository",
+            return_value=[result],
+        ) as search,
+    ):
+        exit_code = main([
+            "search",
+            "Where are embeddings generated?",
+            "--repository",
+            "RepoLens",
+            "--file-type",
+            "python",
+            "--top-k",
+            "3",
+        ])
+
+    output = capsys.readouterr().out
+
+    assert exit_code == 0
+    assert "Result 1 | Score: 0.9877" in output
+    assert "File: repolens/retrieval/embedder.py" in output
+    assert "Lines: 1-1" in output
+    assert "Chunk ID: chunk-id" in output
+    assert search.call_args.kwargs["top_k"] == 3
+    assert search.call_args.kwargs["repository"] == "RepoLens"
+    assert search.call_args.kwargs["file_type"] == "python"
+
+
+def test_search_command_handles_no_results(capsys) -> None:
+    with (
+        patch(
+            "repolens.cli.create_qdrant_client",
+            return_value=Mock(),
+        ),
+        patch(
+            "repolens.cli.search_repository",
+            return_value=[],
+        ),
+    ):
+        exit_code = main([
+            "search",
+            "missing query",
+        ])
+
+    assert exit_code == 0
+    assert "No matching chunks found." in capsys.readouterr().out

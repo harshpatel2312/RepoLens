@@ -42,6 +42,14 @@ class EmbeddedChunk:
 
 
 @dataclass(frozen=True)
+class SearchResult:
+    rank: int
+    score: float
+    content: str
+    metadata: ChunkMetadata
+
+
+@dataclass(frozen=True)
 class IngestionFailure:
     relative_path: str
     reason: str
