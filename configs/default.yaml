@@ -1,0 +1,58 @@
+INGESTION:
+  MAX_FILE_SIZE: 1048576  # 1 MiB
+  EXTENSIONS: [".py", ".txt", ".md"]
+  FILE_TYPES:             # for mapping
+    ".py": "python"
+    ".md": "markdown"
+    ".txt": "text"
+  IGNORE_DIRECTORIES: [
+    ".git",
+    ".hg",
+    ".svn",
+    ".venv",
+    "venv",
+    "env",
+    "__pycache__",
+    ".pytest_cache",
+    ".mypy_cache",
+    ".ruff_cache",
+    ".tox",
+    "node_modules",
+    "build",
+    "dist",
+    "site-packages",
+    ".repolens"
+  ]
+  GENERATED_FILE_PATTERNS: [
+    "*.generated.py",
+    "*_pb2.py",
+    "*_pb2_grpc.py",
+  ]
+
+TOKENIZER:
+  ENCODING_NAME: "cl100k_base" # for tiktoken
+
+CHUNKING:
+  CHUNK_SIZE: 512 # tokens
+  OVERLAP: 64 # tokens
+  MIN_CHUNK_SIZE: 30 # tokens
+
+EMBEDDING:
+  MODEL_NAME: "BAAI/bge-small-en-v1.5"
+  BATCH_SIZE: 16 # for CUDA
+  NORMALIZE: true
+  DEVICE: "cpu" # "cpu" or "cuda" 
+  QUERY_PREFIX: "Represent this sentence for searching relevant passages: "
+
+QDRANT:
+  URL: "http://localhost:6333"
+  COLLECTION_NAME: "repolens_chunks_v1"
+  DISTANCE: "Cosine"
+  UPSERT_BATCH_SIZE: 64 # for CUDA
+
+RETRIEVAL:
+  TOP_K: 5
+
+GENERATION:
+  TEMPERATURE: 0.1
+  CONTEXT_WINDOW: 4096 # tokens
