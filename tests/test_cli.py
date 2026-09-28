@@ -189,6 +189,29 @@ def test_inspect_chunks_output_is_deterministic(
     )
 
 
+def test_inspect_chunks_prints_python_symbol_metadata(
+    tmp_path: Path,
+    capsys,
+) -> None:
+    (tmp_path / "search.py").write_text(
+        "class Searcher:\n"
+        "    def find(self, query: str) -> str:\n"
+        "        return query\n",
+        encoding="utf-8",
+    )
+
+    exit_code = main(["inspect-chunks", str(tmp_path)])
+    output = capsys.readouterr().out
+
+    assert exit_code == 0
+    assert "Symbol type: class" in output
+    assert "Symbol: Searcher" in output
+    assert "Symbol type: method" in output
+    assert "Symbol: Searcher.find" in output
+    assert "Parent: Searcher" in output
+    assert "Signature: def find(self, query: str) -> str:" in output
+
+
 def create_chunk() -> TextChunk:
     """Create a representative chunk for REP-8 CLI tests."""
 
