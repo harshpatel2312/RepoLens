@@ -328,7 +328,18 @@ def chunk_document(
 
     chunks: list[TextChunk] = []
 
-    if document.metadata.file_type == "markdown":
+    if document.metadata.file_type == "python":
+        # Imported lazily because the AST chunker reuses the baseline
+        # line-aware chunking and metadata helpers defined in this module.
+        from repolens.ingestion.ast_chunker import chunk_python_document
+
+        chunks = chunk_python_document(
+            document,
+            chunk_size=chunk_size,
+            overlap=overlap,
+            min_chunk_size=min_chunk_size,
+        )
+    elif document.metadata.file_type == "markdown":
         chunks = chunk_markdown_document(
             document=document,
             chunk_size=chunk_size,

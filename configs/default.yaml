@@ -41,7 +41,7 @@ EMBEDDING:
   MODEL_NAME: "BAAI/bge-small-en-v1.5"
   BATCH_SIZE: 16 # for CUDA
   NORMALIZE: true
-  DEVICE: "cpu" # "cpu" or "cuda" 
+  DEVICE: "cuda" # "cpu" or "cuda" 
   QUERY_PREFIX: "Represent this sentence for searching relevant passages: "
 
 QDRANT:

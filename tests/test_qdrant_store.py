@@ -46,6 +46,42 @@ def test_point_id_is_deterministic_uuid() -> None:
     assert len(first) == 36
 
 
+def test_symbol_metadata_survives_qdrant_indexing_and_retrieval() -> None:
+    client = QdrantClient(":memory:")
+    chunk = EmbeddedChunk(
+        content="class Searcher:\n    def find(self):\n        return 1\n",
+        metadata=ChunkMetadata(
+            repository="RepoLens",
+            relative_path="repolens/search.py",
+            file_type="python",
+            start_line=10,
+            end_line=12,
+            token_count=12,
+            content_hash="method-hash",
+            chunk_id="searcher-find",
+            symbol_type="method",
+            symbol_name="Searcher.find",
+            parent_symbol="Searcher",
+            signature="def find(self):",
+        ),
+        embedding=[1.0, 0.0],
+    )
+
+    upsert_embedded_chunks(client, [chunk], collection_name="chunks")
+    results = search_points(
+        client,
+        [1.0, 0.0],
+        collection_name="chunks",
+    )
+
+    assert len(results) == 1
+    metadata = results[0].metadata
+    assert metadata.symbol_type == "method"
+    assert metadata.symbol_name == "Searcher.find"
+    assert metadata.parent_symbol == "Searcher"
+    assert metadata.signature == "def find(self):"
+
+
 def test_ensure_collection_creates_and_reuses_collection() -> None:
     client = QdrantClient(":memory:")
 
@@ -137,7 +173,7 @@ def test_search_returns_ranked_results_and_applies_filters() -> None:
 def test_filter_is_optional_and_validates_empty_values() -> None:
     assert build_search_filter() is None
 
-    with pytest.raises(ValueError, match="repository filter"):
+    with pytest.raises(ValueError, match="Repository filter"):
         build_search_filter(repository="   ")
 
 

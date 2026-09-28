@@ -128,6 +128,10 @@ def _chunk_payload(chunk: EmbeddedChunk) -> dict[str, object]:
         "content_hash": metadata.content_hash,
         "chunk_id": metadata.chunk_id,
         "heading": metadata.heading,
+        "symbol_type": metadata.symbol_type,
+        "symbol_name": metadata.symbol_name,
+        "parent_symbol": metadata.parent_symbol,
+        "signature": metadata.signature,
     }
 
 
@@ -244,6 +248,10 @@ def _metadata_from_payload(payload: dict[str, Any]) -> ChunkMetadata:
         )
 
     heading = payload.get("heading")
+    symbol_type = payload.get("symbol_type")
+    symbol_name = payload.get("symbol_name")
+    parent_symbol = payload.get("parent_symbol")
+    signature = payload.get("signature")
 
     return ChunkMetadata(
         repository=str(payload["repository"]),
@@ -255,6 +263,12 @@ def _metadata_from_payload(payload: dict[str, Any]) -> ChunkMetadata:
         content_hash=str(payload["content_hash"]),
         chunk_id=str(payload["chunk_id"]),
         heading=str(heading) if heading is not None else None,
+        symbol_type=str(symbol_type) if symbol_type is not None else None,
+        symbol_name=str(symbol_name) if symbol_name is not None else None,
+        parent_symbol=(
+            str(parent_symbol) if parent_symbol is not None else None
+        ),
+        signature=str(signature) if signature is not None else None,
     )
 
 

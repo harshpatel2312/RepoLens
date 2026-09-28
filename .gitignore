@@ -219,3 +219,6 @@ __marimo__/
 
 # Hugging Face
 .hf_cache/
+
+# RepoLens
+.repolens/
