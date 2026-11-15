@@ -346,6 +346,14 @@ def run_inspect_chunks_command(args: argparse.Namespace) -> int:
 
         if metadata.heading is not None:
             print(f"Heading: {metadata.heading}")
+        if metadata.symbol_type is not None:
+            print(f"Symbol type: {metadata.symbol_type}")
+        if metadata.symbol_name is not None:
+            print(f"Symbol: {metadata.symbol_name}")
+        if metadata.parent_symbol is not None:
+            print(f"Parent: {metadata.parent_symbol}")
+        if metadata.signature is not None:
+            print(f"Signature: {metadata.signature}")
 
         print(f"Tokens: {metadata.token_count}")
         print(f"Chunk ID: {metadata.chunk_id}")
@@ -441,6 +449,14 @@ def run_search_command(args: argparse.Namespace) -> int:
         )
         if metadata.heading is not None:
             print(f"Heading: {metadata.heading}")
+        if metadata.symbol_type is not None:
+            print(f"Symbol type: {metadata.symbol_type}")
+        if metadata.symbol_name is not None:
+            print(f"Symbol: {metadata.symbol_name}")
+        if metadata.parent_symbol is not None:
+            print(f"Parent: {metadata.parent_symbol}")
+        if metadata.signature is not None:
+            print(f"Signature: {metadata.signature}")
         print(f"Chunk ID: {metadata.chunk_id}")
         print(f"Preview: {_build_preview(result.content)}")
         print()

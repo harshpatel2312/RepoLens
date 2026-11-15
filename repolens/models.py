@@ -26,6 +26,11 @@ class ChunkMetadata:
     content_hash: str
     chunk_id: str
     heading: str | None = None
+    symbol_type: str | None = None
+    symbol_name: str | None = None
+    parent_symbol: str | None = None
+    signature: str | None = None
+
 
 
 @dataclass(frozen=True)
